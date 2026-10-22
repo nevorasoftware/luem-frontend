@@ -23,10 +23,10 @@ export default function AdminLoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.message || 'Credenciales incorrectas');
+        throw new Error(data.message || (res.status === 502 || res.status === 500 ? 'No se pudo conectar con el servidor backend' : 'Credenciales incorrectas'));
       }
 
       router.push('/admin');

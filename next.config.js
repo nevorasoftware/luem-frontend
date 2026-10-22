@@ -14,7 +14,9 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const rawBackend = process.env.BACKEND_INTERNAL_URL || 'http://localhost:4000';
+    const rawBackend =
+      process.env.BACKEND_INTERNAL_URL ||
+      'https://luem-backend-production.up.railway.app';
     const backendUrl = rawBackend.replace(/\/+$/, '');
     return [
       {
