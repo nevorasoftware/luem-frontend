@@ -4,9 +4,9 @@
   "description": "Plataforma Web LUEM RENT A CAR (Next.js, React, Tailwind CSS, TypeScript)",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start",
     "lint": "next lint"
   },
   "dependencies": {
