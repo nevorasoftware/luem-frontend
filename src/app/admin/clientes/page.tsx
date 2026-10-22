@@ -6,16 +6,20 @@ import { Users, Search, ShieldAlert, ShieldCheck, Phone, Mail, Loader2 } from 'l
 interface CustomerAdmin {
   id: string;
   fullName: string;
-  documentNumber: string;
-  documentType: string;
-  email: string;
-  phone: string;
-  isBlocked: boolean;
+  dui?: string;
+  documentNumber?: string;
+  documentType?: string;
+  email?: string;
+  phone?: string;
+  blocked?: boolean;
+  isBlocked?: boolean;
+  blockedReason?: string;
   blockReason?: string;
-  createdAt: string;
+  createdAt?: string;
   _count?: {
-    reservations: number;
-    bookingRequests: number;
+    reservations?: number;
+    requests?: number;
+    bookingRequests?: number;
   };
 }
 
@@ -44,15 +48,20 @@ export default function AdminCustomersPage() {
   };
 
   const toggleBlock = async (customer: CustomerAdmin) => {
-    const action = customer.isBlocked ? 'desbloquear' : 'bloquear';
-    const reason = !customer.isBlocked ? prompt('Ingresa el motivo del bloqueo:') : '';
-    if (!customer.isBlocked && !reason) return;
+    const isCurrentlyBlocked = Boolean(customer.blocked ?? customer.isBlocked);
+    const reason = !isCurrentlyBlocked ? prompt('Ingresa el motivo del bloqueo:') : '';
+    if (!isCurrentlyBlocked && !reason) return;
 
     try {
       const res = await fetch(`/api/customers/${customer.id}/block`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isBlocked: !customer.isBlocked, blockReason: reason }),
+        body: JSON.stringify({
+          isBlocked: !isCurrentlyBlocked,
+          blockReason: reason,
+          blocked: !isCurrentlyBlocked,
+          blockedReason: reason,
+        }),
       });
       if (res.ok) {
         loadCustomers();
@@ -62,12 +71,15 @@ export default function AdminCustomersPage() {
     }
   };
 
-  const filtered = customers.filter(
-    (c) =>
-      c.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      c.documentNumber.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = customers.filter((c) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    const name = (c.fullName || '').toLowerCase();
+    const doc = (c.dui || c.documentNumber || '').toLowerCase();
+    const email = (c.email || '').toLowerCase();
+    const phone = (c.phone || '').toLowerCase();
+    return name.includes(q) || doc.includes(q) || email.includes(q) || phone.includes(q);
+  });
 
   return (
     <div className="space-y-6">
@@ -115,42 +127,47 @@ export default function AdminCustomersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">{c.fullName}</td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
-                      {c.documentNumber}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div>{c.email}</div>
-                      <div className="text-[11px] text-gray-400">{c.phone}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold">{c._count?.reservations || 0} contratos</td>
-                    <td className="py-3.5 px-4">
-                      {c.isBlocked ? (
-                        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800">
-                          Bloqueado
-                        </span>
-                      ) : (
-                        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          Habilitado
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => toggleBlock(c)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                          c.isBlocked
-                            ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                            : 'bg-red-50 hover:bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {c.isBlocked ? 'Desbloquear' : 'Bloquear'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((c) => {
+                  const isBlocked = Boolean(c.blocked ?? c.isBlocked);
+                  const docNumber = c.dui || c.documentNumber || 'S/D';
+                  const resCount = c._count?.reservations ?? c._count?.bookingRequests ?? c._count?.requests ?? 0;
+                  return (
+                    <tr key={c.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">{c.fullName}</td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
+                        {docNumber}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div>{c.email || 'Sin correo'}</div>
+                        <div className="text-[11px] text-gray-400">{c.phone || 'Sin teléfono'}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold">{resCount} contratos</td>
+                      <td className="py-3.5 px-4">
+                        {isBlocked ? (
+                          <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-800">
+                            Bloqueado
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            Habilitado
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => toggleBlock(c)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                            isBlocked
+                              ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                              : 'bg-red-50 hover:bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {isBlocked ? 'Desbloquear' : 'Bloquear'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

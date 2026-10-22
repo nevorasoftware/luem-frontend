@@ -8,47 +8,57 @@ import {
 
 interface RequestItem {
   id: string;
-  requestCode: string;
+  code?: string;
+  requestCode?: string;
   status: string;
-  pickupDate: string;
-  returnDate: string;
-  pickupLocation: string;
-  returnLocation: string;
-  totalAmount: number;
-  securityDeposit: number;
+  pickupAt?: string;
+  returnAt?: string;
+  pickupDate?: string;
+  returnDate?: string;
+  pickupLocation?: string | { name: string };
+  returnLocation?: string | { name: string };
+  estimatedTotal?: number;
+  totalAmount?: number;
+  securityDeposit?: number;
   reviewNotes?: string;
   rejectionReason?: string;
   createdAt: string;
-  customer: {
+  customer?: {
     id: string;
     fullName: string;
-    documentNumber: string;
+    dui?: string;
+    documentNumber?: string;
     email: string;
     phone: string;
     address?: string;
     emergencyContactName?: string;
     emergencyContactPhone?: string;
   };
-  vehicle: {
+  vehicle?: {
     id: string;
-    name: string;
+    name?: string;
     brand: string;
     model: string;
     year: number;
+    plate?: string;
+    licensePlate?: string;
   };
-  documents: {
+  documents?: {
     id: string;
     documentType: string;
     status: string;
-    filename: string;
+    filename?: string;
+    file?: { originalName?: string; url?: string };
   }[];
 }
 
 interface VehicleOption {
   id: string;
-  name: string;
+  name?: string;
+  model?: string;
   brand: string;
-  licensePlate: string;
+  plate?: string;
+  licensePlate?: string;
 }
 
 export default function AdminRequestsPage() {
@@ -104,7 +114,7 @@ export default function AdminRequestsPage() {
 
   const handleOpenModal = (req: RequestItem) => {
     setSelectedReq(req);
-    setApproveVehicleId(req.vehicle.id);
+    setApproveVehicleId(req.vehicle?.id || '');
     setActiveTab('DETAILS');
     setApproveNotes('');
     setRequestInfoNotes('');
@@ -119,7 +129,7 @@ export default function AdminRequestsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vehicleId: approveVehicleId || selectedReq.vehicle.id,
+          vehicleId: approveVehicleId || selectedReq.vehicle?.id || '',
           internalNotes: approveNotes,
         }),
       });
@@ -197,10 +207,13 @@ export default function AdminRequestsPage() {
 
   const filteredRequests = requests.filter((r) => {
     const matchesStatus = statusFilter === 'TODAS' || r.status === statusFilter;
-    const matchesSearch =
-      r.requestCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.customer.documentNumber.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!searchQuery.trim()) return matchesStatus;
+    const q = searchQuery.trim().toLowerCase();
+    const code = (r.code || r.requestCode || '').toLowerCase();
+    const customer = (r.customer?.fullName || '').toLowerCase();
+    const dui = (r.customer?.dui || r.customer?.documentNumber || '').toLowerCase();
+    const vehicle = (r.vehicle?.model || r.vehicle?.name || r.vehicle?.brand || '').toLowerCase();
+    const matchesSearch = code.includes(q) || customer.includes(q) || dui.includes(q) || vehicle.includes(q);
     return matchesStatus && matchesSearch;
   });
 
@@ -277,60 +290,75 @@ export default function AdminRequestsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredRequests.map((req) => (
-                  <tr key={req.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
-                      {req.requestCode}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-luxem-night">{req.customer.fullName}</div>
-                      <div className="text-[11px] text-gray-400 font-mono">DUI: {req.customer.documentNumber}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-luxem-night">
-                        {req.vehicle.brand} {req.vehicle.name}
-                      </div>
-                      <div className="text-[11px] text-gray-400">{req.vehicle.year}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div>{new Date(req.pickupDate).toLocaleDateString('es-SV')}</div>
-                      <div className="text-[11px] text-gray-400">al {new Date(req.returnDate).toLocaleDateString('es-SV')}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      ${(req.totalAmount / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md text-[11px]">
-                        <FileText className="w-3 h-3 text-luxem-accent" />
-                        {req.documents.length} archivos
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          req.status === 'APROBADA'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : req.status === 'PENDIENTE_REVISION'
-                            ? 'bg-blue-100 text-blue-800'
-                            : req.status === 'DOCUMENTACION_INCOMPLETA'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {req.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleOpenModal(req)}
-                        className="bg-luxem-night hover:bg-luxem-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 shadow-sm"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Revisar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filteredRequests.map((req) => {
+                  const reqCode = req.code || req.requestCode || 'SOL';
+                  const custName = req.customer?.fullName || 'Cliente General';
+                  const custDoc = req.customer?.dui || req.customer?.documentNumber || 'S/D';
+                  const vBrand = req.vehicle?.brand || '';
+                  const vModel = req.vehicle?.model || req.vehicle?.name || 'Vehículo';
+                  const vYear = req.vehicle?.year || '';
+                  const pDate = req.pickupAt || req.pickupDate;
+                  const rDate = req.returnAt || req.returnDate;
+                  const total = Number(req.estimatedTotal ?? (req.totalAmount ? (req.totalAmount > 1000 ? req.totalAmount / 100 : req.totalAmount) : 0));
+                  const docsCount = Array.isArray(req.documents) ? req.documents.length : 0;
+
+                  return (
+                    <tr key={req.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
+                        {reqCode}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-luxem-night">{custName}</div>
+                        <div className="text-[11px] text-gray-400 font-mono">DUI: {custDoc}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-luxem-night">
+                          {vBrand} {vModel}
+                        </div>
+                        <div className="text-[11px] text-gray-400">{vYear}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div>{pDate ? new Date(pDate).toLocaleDateString('es-SV') : 'N/D'}</div>
+                        <div className="text-[11px] text-gray-400">
+                          al {rDate ? new Date(rDate).toLocaleDateString('es-SV') : 'N/D'}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        ${total.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md text-[11px]">
+                          <FileText className="w-3 h-3 text-luxem-accent" />
+                          {docsCount} archivos
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            req.status === 'APROBADA'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : req.status === 'PENDIENTE_REVISION'
+                              ? 'bg-blue-100 text-blue-800'
+                              : req.status === 'DOCUMENTACION_INCOMPLETA'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => handleOpenModal(req)}
+                          className="bg-luxem-night hover:bg-luxem-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold transition inline-flex items-center gap-1 shadow-sm"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Revisar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -338,156 +366,181 @@ export default function AdminRequestsPage() {
       </div>
 
       {/* Review Modal */}
-      {selectedReq && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between border-b pb-4">
-              <div>
-                <span className="text-xs font-bold text-gray-400 uppercase">Solicitud de Arrendamiento</span>
-                <h2 className="text-2xl font-black text-luxem-night font-mono">{selectedReq.requestCode}</h2>
-              </div>
-              <button
-                onClick={() => setSelectedReq(null)}
-                className="p-2 text-gray-400 hover:text-luxem-night rounded-full"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+      {selectedReq && (() => {
+        const sCode = selectedReq.code || selectedReq.requestCode || 'SOL';
+        const sCustName = selectedReq.customer?.fullName || 'Cliente General';
+        const sCustDoc = selectedReq.customer?.dui || selectedReq.customer?.documentNumber || 'S/D';
+        const sEmail = selectedReq.customer?.email || 'Sin correo';
+        const sPhone = selectedReq.customer?.phone || 'Sin teléfono';
+        const sAddress = selectedReq.customer?.address || 'N/A';
+        const sEmergName = selectedReq.customer?.emergencyContactName || 'N/A';
+        const sEmergPhone = selectedReq.customer?.emergencyContactPhone || '';
+        const sVBrand = selectedReq.vehicle?.brand || '';
+        const sVModel = selectedReq.vehicle?.model || selectedReq.vehicle?.name || 'Vehículo';
+        const sPDate = selectedReq.pickupAt || selectedReq.pickupDate;
+        const sRDate = selectedReq.returnAt || selectedReq.returnDate;
+        const sPLoc = typeof selectedReq.pickupLocation === 'object' ? selectedReq.pickupLocation?.name : (selectedReq.pickupLocation || 'Sucursal Principal');
+        const sRLoc = typeof selectedReq.returnLocation === 'object' ? selectedReq.returnLocation?.name : (selectedReq.returnLocation || 'Sucursal Principal');
+        const sTotal = Number(selectedReq.estimatedTotal ?? (selectedReq.totalAmount ? (selectedReq.totalAmount > 1000 ? selectedReq.totalAmount / 100 : selectedReq.totalAmount) : 0));
+        const sDeposit = Number(selectedReq.securityDeposit ? (selectedReq.securityDeposit > 1000 ? selectedReq.securityDeposit / 100 : selectedReq.securityDeposit) : 0);
+        const sDocs = Array.isArray(selectedReq.documents) ? selectedReq.documents : [];
 
-            {/* Sub-Tabs */}
-            <div className="flex gap-2 border-b pb-3">
-              <button
-                onClick={() => setActiveTab('DETAILS')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  activeTab === 'DETAILS' ? 'bg-luxem-primary text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                Información y Documentos
-              </button>
-              {selectedReq.status !== 'APROBADA' && selectedReq.status !== 'RECHAZADA' && (
-                <>
-                  <button
-                    onClick={() => setActiveTab('APPROVE')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                      activeTab === 'APPROVE' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-emerald-700'
-                    }`}
-                  >
-                    Aprobar Solicitud
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('REQUEST_INFO')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                      activeTab === 'REQUEST_INFO' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-amber-700'
-                    }`}
-                  >
-                    Pedir Documentos
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('REJECT')}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                      activeTab === 'REJECT' ? 'bg-red-600 text-white' : 'bg-gray-100 text-red-700'
-                    }`}
-                  >
-                    Rechazar
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* TAB 1: DETAILS & DOCUMENTS */}
-            {activeTab === 'DETAILS' && (
-              <div className="space-y-6">
-                {/* Client & Itinerary Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 p-5 rounded-2xl text-xs">
-                  <div>
-                    <h4 className="font-bold text-luxem-night uppercase tracking-wider mb-2 text-[10px]">
-                      Datos del Solicitante
-                    </h4>
-                    <div className="space-y-1 text-gray-700">
-                      <div><strong>Nombre:</strong> {selectedReq.customer.fullName}</div>
-                      <div><strong>DUI / Doc:</strong> {selectedReq.customer.documentNumber}</div>
-                      <div><strong>Email:</strong> {selectedReq.customer.email}</div>
-                      <div><strong>Teléfono:</strong> {selectedReq.customer.phone}</div>
-                      <div><strong>Dirección:</strong> {selectedReq.customer.address || 'N/A'}</div>
-                      <div><strong>Contacto Emergencia:</strong> {selectedReq.customer.emergencyContactName} ({selectedReq.customer.emergencyContactPhone})</div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-luxem-night uppercase tracking-wider mb-2 text-[10px]">
-                      Itinerario y Costos
-                    </h4>
-                    <div className="space-y-1 text-gray-700">
-                      <div><strong>Vehículo Solicitado:</strong> {selectedReq.vehicle.brand} {selectedReq.vehicle.name}</div>
-                      <div><strong>Entrega:</strong> {new Date(selectedReq.pickupDate).toLocaleString('es-SV')} ({selectedReq.pickupLocation})</div>
-                      <div><strong>Devolución:</strong> {new Date(selectedReq.returnDate).toLocaleString('es-SV')} ({selectedReq.returnLocation})</div>
-                      <div><strong>Total Arrendamiento:</strong> ${(selectedReq.totalAmount / 100).toFixed(2)}</div>
-                      <div><strong>Depósito Reembolsable:</strong> ${(selectedReq.securityDeposit / 100).toFixed(2)}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Document Gallery */}
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b pb-4">
                 <div>
-                  <h4 className="font-bold text-sm text-luxem-night mb-3">
-                    Documentos de Identidad Adjuntos
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {selectedReq.documents.map((doc) => (
-                      <div
-                        key={doc.id}
-                        className="p-4 rounded-2xl border border-gray-200 bg-white flex items-center justify-between shadow-sm"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-6 h-6 text-luxem-primary" />
-                          <div>
-                            <div className="text-xs font-bold text-luxem-night">
-                              {doc.documentType.replace('_', ' ')}
-                            </div>
-                            <div className="text-[10px] text-gray-400">{doc.filename}</div>
-                          </div>
-                        </div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Solicitud de Arrendamiento</span>
+                  <h2 className="text-2xl font-black text-luxem-night font-mono">{sCode}</h2>
+                </div>
+                <button
+                  onClick={() => setSelectedReq(null)}
+                  className="p-2 text-gray-400 hover:text-luxem-night rounded-full"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-                        <a
-                          href={`/api/requests/${selectedReq.id}/documents/${doc.id}/view`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-gray-100 hover:bg-luxem-primary hover:text-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          Ver
-                        </a>
+              {/* Sub-Tabs */}
+              <div className="flex gap-2 border-b pb-3">
+                <button
+                  onClick={() => setActiveTab('DETAILS')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    activeTab === 'DETAILS' ? 'bg-luxem-primary text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  Información y Documentos
+                </button>
+                {selectedReq.status !== 'APROBADA' && selectedReq.status !== 'RECHAZADA' && (
+                  <>
+                    <button
+                      onClick={() => setActiveTab('APPROVE')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                        activeTab === 'APPROVE' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-emerald-700'
+                      }`}
+                    >
+                      Aprobar Solicitud
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('REQUEST_INFO')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                        activeTab === 'REQUEST_INFO' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-amber-700'
+                      }`}
+                    >
+                      Pedir Documentos
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('REJECT')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                        activeTab === 'REJECT' ? 'bg-red-600 text-white' : 'bg-gray-100 text-red-700'
+                      }`}
+                    >
+                      Rechazar
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* TAB 1: DETAILS & DOCUMENTS */}
+              {activeTab === 'DETAILS' && (
+                <div className="space-y-6">
+                  {/* Client & Itinerary Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 p-5 rounded-2xl text-xs">
+                    <div>
+                      <h4 className="font-bold text-luxem-night uppercase tracking-wider mb-2 text-[10px]">
+                        Datos del Solicitante
+                      </h4>
+                      <div className="space-y-1 text-gray-700">
+                        <div><strong>Nombre:</strong> {sCustName}</div>
+                        <div><strong>DUI / Doc:</strong> {sCustDoc}</div>
+                        <div><strong>Email:</strong> {sEmail}</div>
+                        <div><strong>Teléfono:</strong> {sPhone}</div>
+                        <div><strong>Dirección:</strong> {sAddress}</div>
+                        <div><strong>Contacto Emergencia:</strong> {sEmergName} {sEmergPhone ? `(${sEmergPhone})` : ''}</div>
                       </div>
-                    ))}
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-luxem-night uppercase tracking-wider mb-2 text-[10px]">
+                        Itinerario y Costos
+                      </h4>
+                      <div className="space-y-1 text-gray-700">
+                        <div><strong>Vehículo Solicitado:</strong> {sVBrand} {sVModel}</div>
+                        <div><strong>Entrega:</strong> {sPDate ? new Date(sPDate).toLocaleString('es-SV') : 'N/D'} ({sPLoc})</div>
+                        <div><strong>Devolución:</strong> {sRDate ? new Date(sRDate).toLocaleString('es-SV') : 'N/D'} ({sRLoc})</div>
+                        <div><strong>Total Estimado:</strong> ${sTotal.toFixed(2)}</div>
+                        <div><strong>Depósito Reembolsable:</strong> ${sDeposit.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Document Gallery */}
+                  <div>
+                    <h4 className="font-bold text-sm text-luxem-night mb-3">
+                      Documentos de Identidad Adjuntos
+                    </h4>
+                    {sDocs.length === 0 ? (
+                      <div className="p-4 bg-gray-50 rounded-2xl text-xs text-gray-500 text-center">
+                        No se han adjuntado archivos todavía
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {sDocs.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="p-4 rounded-2xl border border-gray-200 bg-white flex items-center justify-between shadow-sm"
+                          >
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-6 h-6 text-luxem-primary" />
+                              <div>
+                                <div className="text-xs font-bold text-luxem-night">
+                                  {doc.documentType.replace('_', ' ')}
+                                </div>
+                                <div className="text-[10px] text-gray-400">{doc.filename || doc.file?.originalName || 'documento'}</div>
+                              </div>
+                            </div>
+
+                            <a
+                              href={`/api/requests/${selectedReq.id}/documents/${doc.id}/view`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-gray-100 hover:bg-luxem-primary hover:text-white text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              Ver
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* TAB 2: APPROVE */}
-            {activeTab === 'APPROVE' && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-900 text-xs">
-                  Al aprobar esta solicitud, se generará formalmente la <strong>Reserva</strong> en el sistema, se bloquearán las fechas del vehículo para evitar doble reserva y se notificará al cliente por correo electrónico con su token de confirmación.
-                </div>
+              {/* TAB 2: APPROVE */}
+              {activeTab === 'APPROVE' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-emerald-50 text-emerald-900 text-xs">
+                    Al aprobar esta solicitud, se generará formalmente la <strong>Reserva</strong> en el sistema, se bloquearán las fechas del vehículo para evitar doble reserva y se notificará al cliente por correo electrónico con su token de confirmación.
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-luxem-night/70 uppercase tracking-wider mb-2">
-                    Vehículo a Asignar
-                  </label>
-                  <select
-                    value={approveVehicleId}
-                    onChange={(e) => setApproveVehicleId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
-                  >
-                    {vehicles.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.brand} {v.name} ({v.licensePlate})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-xs font-bold text-luxem-night/70 uppercase tracking-wider mb-2">
+                      Vehículo a Asignar
+                    </label>
+                    <select
+                      value={approveVehicleId}
+                      onChange={(e) => setApproveVehicleId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-xs font-semibold bg-white"
+                    >
+                      {vehicles.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.brand} {v.model || v.name} ({v.plate || v.licensePlate || 'S/P'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                 <div>
                   <label className="block text-xs font-bold text-luxem-night/70 uppercase tracking-wider mb-2">
@@ -576,9 +629,10 @@ export default function AdminRequestsPage() {
                 </button>
               </div>
             )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -8,26 +8,35 @@ import {
 
 interface ReservationItem {
   id: string;
-  reservationCode: string;
+  code?: string;
+  reservationCode?: string;
   status: string;
-  pickupDate: string;
-  returnDate: string;
-  pickupLocation: string;
-  returnLocation: string;
-  totalAmount: number;
-  paidAmount: number;
-  balanceDue: number;
-  securityDeposit: number;
-  customer: {
-    fullName: string;
-    documentNumber: string;
-    phone: string;
-    email: string;
+  pickupAt?: string;
+  returnAt?: string;
+  pickupDate?: string;
+  returnDate?: string;
+  pickupLocation?: string | { name: string };
+  returnLocation?: string | { name: string };
+  total?: number;
+  totalAmount?: number;
+  amountPaid?: number;
+  paidAmount?: number;
+  balanceDue?: number;
+  securityDeposit?: number;
+  depositRequired?: number;
+  customer?: {
+    fullName?: string;
+    dui?: string;
+    documentNumber?: string;
+    phone?: string;
+    email?: string;
   };
-  vehicle: {
-    name: string;
-    brand: string;
-    licensePlate: string;
+  vehicle?: {
+    name?: string;
+    model?: string;
+    brand?: string;
+    plate?: string;
+    licensePlate?: string;
   };
   payments?: {
     id: string;
@@ -158,10 +167,19 @@ export default function AdminReservationsPage() {
 
   const filtered = reservations.filter((r) => {
     const matchesStatus = statusFilter === 'TODAS' || r.status === statusFilter;
+    if (!search.trim()) return matchesStatus;
+    const q = search.trim().toLowerCase();
+    const code = (r.code || r.reservationCode || '').toLowerCase();
+    const customer = (r.customer?.fullName || '').toLowerCase();
+    const dui = (r.customer?.dui || r.customer?.documentNumber || '').toLowerCase();
+    const plate = (r.vehicle?.plate || r.vehicle?.licensePlate || '').toLowerCase();
+    const model = (r.vehicle?.model || r.vehicle?.name || '').toLowerCase();
     const matchesSearch =
-      r.reservationCode.toLowerCase().includes(search.toLowerCase()) ||
-      r.customer.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      r.vehicle.licensePlate.toLowerCase().includes(search.toLowerCase());
+      code.includes(q) ||
+      customer.includes(q) ||
+      dui.includes(q) ||
+      plate.includes(q) ||
+      model.includes(q);
     return matchesStatus && matchesSearch;
   });
 
@@ -188,7 +206,7 @@ export default function AdminReservationsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {['TODAS', 'CONFIRMADA', 'EN_CURSO', 'COMPLETADA', 'CANCELADA'].map((st) => (
+          {['TODAS', 'CONFIRMADA', 'EN_CURSO', 'FINALIZADA', 'COMPLETADA', 'CANCELADA'].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
@@ -232,64 +250,80 @@ export default function AdminReservationsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((res) => (
-                  <tr key={res.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
-                      {res.reservationCode}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-luxem-night">{res.customer.fullName}</div>
-                      <div className="text-[11px] text-gray-400">{res.customer.phone}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-luxem-night">
-                        {res.vehicle.brand} {res.vehicle.name}
-                      </div>
-                      <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-[10px] text-gray-700">
-                        {res.vehicle.licensePlate}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div>{new Date(res.pickupDate).toLocaleDateString('es-SV')}</div>
-                      <div className="text-[11px] text-gray-400">al {new Date(res.returnDate).toLocaleDateString('es-SV')}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      ${(res.totalAmount / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-emerald-600 font-bold">
-                      ${(res.paidAmount / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-amber-600 font-bold">
-                      ${(res.balanceDue / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          res.status === 'EN_CURSO'
-                            ? 'bg-blue-100 text-blue-800'
-                            : res.status === 'CONFIRMADA'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : res.status === 'COMPLETADA'
-                            ? 'bg-gray-100 text-gray-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {res.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          setSelectedRes(res);
-                          setModalTab('DETAILS');
-                        }}
-                        className="bg-luxem-primary hover:bg-luxem-accent text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
-                      >
-                        Gestionar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((res) => {
+                  const resCode = res.code || res.reservationCode || 'RES';
+                  const custName = res.customer?.fullName || 'Cliente General';
+                  const custPhone = res.customer?.phone || 'Sin teléfono';
+                  const vBrand = res.vehicle?.brand || '';
+                  const vModel = res.vehicle?.model || res.vehicle?.name || 'Vehículo';
+                  const vPlate = res.vehicle?.plate || res.vehicle?.licensePlate || 'S/P';
+                  const pDate = res.pickupAt || res.pickupDate;
+                  const rDate = res.returnAt || res.returnDate;
+                  const total = Number(res.total ?? (res.totalAmount ? (res.totalAmount > 1000 ? res.totalAmount / 100 : res.totalAmount) : 0));
+                  const paid = Number(res.amountPaid ?? (res.paidAmount ? (res.paidAmount > 1000 ? res.paidAmount / 100 : res.paidAmount) : 0));
+                  const balance = Number(res.balanceDue !== undefined ? (res.balanceDue > 1000 ? res.balanceDue / 100 : res.balanceDue) : Math.max(0, total - paid));
+
+                  return (
+                    <tr key={res.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
+                        {resCode}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-luxem-night">{custName}</div>
+                        <div className="text-[11px] text-gray-400">{custPhone}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-luxem-night">
+                          {vBrand} {vModel}
+                        </div>
+                        <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-[10px] text-gray-700">
+                          {vPlate}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div>{pDate ? new Date(pDate).toLocaleDateString('es-SV') : 'N/D'}</div>
+                        <div className="text-[11px] text-gray-400">
+                          al {rDate ? new Date(rDate).toLocaleDateString('es-SV') : 'N/D'}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        ${total.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-emerald-600 font-bold">
+                        ${paid.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-amber-600 font-bold">
+                        ${balance.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            res.status === 'EN_CURSO'
+                              ? 'bg-blue-100 text-blue-800'
+                              : res.status === 'CONFIRMADA'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : res.status === 'FINALIZADA' || res.status === 'COMPLETADA'
+                              ? 'bg-gray-100 text-gray-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {res.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => {
+                            setSelectedRes(res);
+                            setModalTab('DETAILS');
+                          }}
+                          className="bg-luxem-primary hover:bg-luxem-accent text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                        >
+                          Gestionar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -297,94 +331,106 @@ export default function AdminReservationsPage() {
       </div>
 
       {/* Detail / Action Modal */}
-      {selectedRes && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
-            <div className="flex items-center justify-between border-b pb-4">
-              <div>
-                <span className="text-xs font-bold text-gray-400 uppercase">Reserva Vehicular</span>
-                <h2 className="text-2xl font-black text-luxem-night font-mono">{selectedRes.reservationCode}</h2>
+      {selectedRes && (() => {
+        const mCode = selectedRes.code || selectedRes.reservationCode || 'RES';
+        const mCustName = selectedRes.customer?.fullName || 'Cliente General';
+        const mCustDoc = selectedRes.customer?.dui || selectedRes.customer?.documentNumber || 'S/D';
+        const mCustPhone = selectedRes.customer?.phone || 'Sin teléfono';
+        const mVBrand = selectedRes.vehicle?.brand || '';
+        const mVModel = selectedRes.vehicle?.model || selectedRes.vehicle?.name || 'Vehículo';
+        const mVPlate = selectedRes.vehicle?.plate || selectedRes.vehicle?.licensePlate || 'S/P';
+        const mTotal = Number(selectedRes.total ?? (selectedRes.totalAmount ? (selectedRes.totalAmount > 1000 ? selectedRes.totalAmount / 100 : selectedRes.totalAmount) : 0));
+        const mPaid = Number(selectedRes.amountPaid ?? (selectedRes.paidAmount ? (selectedRes.paidAmount > 1000 ? selectedRes.paidAmount / 100 : selectedRes.paidAmount) : 0));
+        const mBalance = Number(selectedRes.balanceDue !== undefined ? (selectedRes.balanceDue > 1000 ? selectedRes.balanceDue / 100 : selectedRes.balanceDue) : Math.max(0, mTotal - mPaid));
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between border-b pb-4">
+                <div>
+                  <span className="text-xs font-bold text-gray-400 uppercase">Reserva Vehicular</span>
+                  <h2 className="text-2xl font-black text-luxem-night font-mono">{mCode}</h2>
+                </div>
+                <button onClick={() => setSelectedRes(null)} className="p-2 text-gray-400 hover:text-luxem-night">
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-              <button onClick={() => setSelectedRes(null)} className="p-2 text-gray-400 hover:text-luxem-night">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
 
-            {/* Modal Tabs */}
-            <div className="flex gap-2 border-b pb-3">
-              <button
-                onClick={() => setModalTab('DETAILS')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  modalTab === 'DETAILS' ? 'bg-luxem-primary text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                Detalles
-              </button>
-              <button
-                onClick={() => setModalTab('PAYMENT')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  modalTab === 'PAYMENT' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-emerald-700'
-                }`}
-              >
-                + Registrar Pago
-              </button>
-              <button
-                onClick={() => setModalTab('INSPECTION')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                  modalTab === 'INSPECTION' ? 'bg-luxem-night text-white' : 'bg-gray-100 text-luxem-night'
-                }`}
-              >
-                + Inspección (Entrega / Devolución)
-              </button>
-            </div>
+              {/* Modal Tabs */}
+              <div className="flex gap-2 border-b pb-3">
+                <button
+                  onClick={() => setModalTab('DETAILS')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    modalTab === 'DETAILS' ? 'bg-luxem-primary text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  Detalles
+                </button>
+                <button
+                  onClick={() => setModalTab('PAYMENT')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    modalTab === 'PAYMENT' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-emerald-700'
+                  }`}
+                >
+                  + Registrar Pago
+                </button>
+                <button
+                  onClick={() => setModalTab('INSPECTION')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+                    modalTab === 'INSPECTION' ? 'bg-luxem-night text-white' : 'bg-gray-100 text-luxem-night'
+                  }`}
+                >
+                  + Inspección (Entrega / Devolución)
+                </button>
+              </div>
 
-            {/* TAB DETAILS */}
-            {modalTab === 'DETAILS' && (
-              <div className="space-y-4 text-xs">
-                <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl">
-                  <div>
-                    <strong className="block text-gray-500 uppercase text-[10px] mb-1">Cliente</strong>
-                    <div className="font-bold text-sm text-luxem-night">{selectedRes.customer.fullName}</div>
-                    <div>DUI: {selectedRes.customer.documentNumber}</div>
-                    <div>Tel: {selectedRes.customer.phone}</div>
-                  </div>
-                  <div>
-                    <strong className="block text-gray-500 uppercase text-[10px] mb-1">Vehículo Asignado</strong>
-                    <div className="font-bold text-sm text-luxem-night">
-                      {selectedRes.vehicle.brand} {selectedRes.vehicle.name}
+              {/* TAB DETAILS */}
+              {modalTab === 'DETAILS' && (
+                <div className="space-y-4 text-xs">
+                  <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl">
+                    <div>
+                      <strong className="block text-gray-500 uppercase text-[10px] mb-1">Cliente</strong>
+                      <div className="font-bold text-sm text-luxem-night">{mCustName}</div>
+                      <div>DUI: {mCustDoc}</div>
+                      <div>Tel: {mCustPhone}</div>
                     </div>
-                    <div>Placa: {selectedRes.vehicle.licensePlate}</div>
+                    <div>
+                      <strong className="block text-gray-500 uppercase text-[10px] mb-1">Vehículo Asignado</strong>
+                      <div className="font-bold text-sm text-luxem-night">
+                        {mVBrand} {mVModel}
+                      </div>
+                      <div>Placa: {mVPlate}</div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div className="p-3 bg-gray-50 rounded-xl border">
-                    <span className="text-gray-500 text-[10px] block">Total</span>
-                    <strong className="text-sm font-black text-luxem-night">
-                      ${(selectedRes.totalAmount / 100).toFixed(2)}
-                    </strong>
-                  </div>
-                  <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                    <span className="text-emerald-700 text-[10px] block">Abonado</span>
-                    <strong className="text-sm font-black text-emerald-800">
-                      ${(selectedRes.paidAmount / 100).toFixed(2)}
-                    </strong>
-                  </div>
-                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
-                    <span className="text-amber-700 text-[10px] block">Saldo Pendiente</span>
-                    <strong className="text-sm font-black text-amber-800">
-                      ${(selectedRes.balanceDue / 100).toFixed(2)}
-                    </strong>
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 bg-gray-50 rounded-xl border">
+                      <span className="text-gray-500 text-[10px] block">Total</span>
+                      <strong className="text-sm font-black text-luxem-night">
+                        ${mTotal.toFixed(2)}
+                      </strong>
+                    </div>
+                    <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <span className="text-emerald-700 text-[10px] block">Abonado</span>
+                      <strong className="text-sm font-black text-emerald-800">
+                        ${mPaid.toFixed(2)}
+                      </strong>
+                    </div>
+                    <div className="p-3 bg-amber-50 rounded-xl border border-amber-100">
+                      <span className="text-amber-700 text-[10px] block">Saldo Pendiente</span>
+                      <strong className="text-sm font-black text-amber-800">
+                        ${mBalance.toFixed(2)}
+                      </strong>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* TAB PAYMENT */}
             {modalTab === 'PAYMENT' && (
               <form onSubmit={handleRegisterPayment} className="space-y-4">
                 <div className="p-3 bg-emerald-50 rounded-xl text-xs text-emerald-900">
-                  Saldo pendiente por cobrar: <strong>${(selectedRes.balanceDue / 100).toFixed(2)} USD</strong>
+                  Saldo pendiente por cobrar: <strong>${mBalance.toFixed(2)} USD</strong>
                 </div>
 
                 <div>
@@ -512,9 +558,10 @@ export default function AdminReservationsPage() {
                 </button>
               </form>
             )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

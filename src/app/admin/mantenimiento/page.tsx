@@ -12,18 +12,22 @@ interface MaintenanceItem {
   startDate: string;
   endDate: string;
   status: string;
-  vehicle: {
-    name: string;
+  vehicle?: {
+    name?: string;
+    model?: string;
     brand: string;
-    licensePlate: string;
+    plate?: string;
+    licensePlate?: string;
   };
 }
 
 interface VehicleOption {
   id: string;
-  name: string;
+  name?: string;
+  model?: string;
   brand: string;
-  licensePlate: string;
+  plate?: string;
+  licensePlate?: string;
 }
 
 export default function AdminMaintenancePage() {
@@ -146,29 +150,34 @@ export default function AdminMaintenancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {records.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      {r.vehicle.brand} {r.vehicle.name} ({r.vehicle.licensePlate})
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-luxem-night">{r.title}</div>
-                      {r.description && <div className="text-[11px] text-gray-400">{r.description}</div>}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div>{new Date(r.startDate).toLocaleDateString('es-SV')}</div>
-                      <div className="text-[11px] text-gray-400">al {new Date(r.endDate).toLocaleDateString('es-SV')}</div>
-                    </td>
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      ${(r.cost / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
-                        {r.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {records.map((r) => {
+                  const vBrand = r.vehicle?.brand || '';
+                  const vModel = r.vehicle?.model || r.vehicle?.name || 'Vehículo';
+                  const vPlate = r.vehicle?.plate || r.vehicle?.licensePlate || 'S/P';
+                  return (
+                    <tr key={r.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        {vBrand} {vModel} ({vPlate})
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-luxem-night">{r.title}</div>
+                        {r.description && <div className="text-[11px] text-gray-400">{r.description}</div>}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div>{new Date(r.startDate).toLocaleDateString('es-SV')}</div>
+                        <div className="text-[11px] text-gray-400">al {new Date(r.endDate).toLocaleDateString('es-SV')}</div>
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        ${(r.cost / 100).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-block px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                          {r.status}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -196,7 +205,7 @@ export default function AdminMaintenancePage() {
                 >
                   {vehicles.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.brand} {v.name} ({v.licensePlate})
+                      {v.brand} {v.model || v.name} ({v.plate || v.licensePlate || 'S/P'})
                     </option>
                   ))}
                 </select>

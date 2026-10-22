@@ -5,17 +5,22 @@ import { Car, Plus, Search, CheckCircle2, Wrench, AlertCircle, Loader2, X } from
 
 interface VehicleAdmin {
   id: string;
-  name: string;
+  name?: string;
   brand: string;
   model: string;
   year: number;
-  licensePlate: string;
-  dailyPrice: number;
-  securityDeposit: number;
-  status: string;
-  category: { name: string };
-  transmission: string;
-  seats: number;
+  plate?: string;
+  licensePlate?: string;
+  dailyRate?: number;
+  dailyPrice?: number;
+  securityDeposit?: number;
+  depositAmount?: number;
+  operationalStatus?: string;
+  status?: string;
+  category?: { name: string };
+  transmission?: string;
+  passengers?: number;
+  seats?: number;
 }
 
 export default function AdminVehiclesPage() {
@@ -106,12 +111,15 @@ export default function AdminVehiclesPage() {
     }
   };
 
-  const filtered = vehicles.filter(
-    (v) =>
-      v.name.toLowerCase().includes(search.toLowerCase()) ||
-      v.brand.toLowerCase().includes(search.toLowerCase()) ||
-      v.licensePlate.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = vehicles.filter((v) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    const brand = (v.brand || '').toLowerCase();
+    const model = (v.model || v.name || '').toLowerCase();
+    const plate = (v.plate || v.licensePlate || '').toLowerCase();
+    const category = (v.category?.name || '').toLowerCase();
+    return brand.includes(q) || model.includes(q) || plate.includes(q) || category.includes(q);
+  });
 
   return (
     <div className="space-y-6">
@@ -170,55 +178,60 @@ export default function AdminVehiclesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filtered.map((v) => (
-                  <tr key={v.id} className="hover:bg-gray-50/60 transition">
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      {v.brand} {v.name} ({v.year})
-                    </td>
-                    <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
-                      {v.licensePlate}
-                    </td>
-                    <td className="py-3.5 px-4">{v.category?.name || 'SUV'}</td>
-                    <td className="py-3.5 px-4">{v.transmission}</td>
-                    <td className="py-3.5 px-4 font-bold text-luxem-night">
-                      ${(v.dailyPrice / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-500">
-                      ${(v.securityDeposit / 100).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                          v.status === 'DISPONIBLE'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : v.status === 'MANTENIMIENTO'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {v.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right space-x-1">
-                      {v.status !== 'DISPONIBLE' && (
-                        <button
-                          onClick={() => handleUpdateStatus(v.id, 'DISPONIBLE')}
-                          className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-bold"
+                {filtered.map((v) => {
+                  const currentStatus = v.operationalStatus || v.status || 'OPERATIVO';
+                  const rate = Number(v.dailyRate ?? (v.dailyPrice ? v.dailyPrice / 100 : 0));
+                  const deposit = Number(v.depositAmount ?? (v.securityDeposit ? v.securityDeposit / 100 : 0));
+                  return (
+                    <tr key={v.id} className="hover:bg-gray-50/60 transition">
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        {v.brand} {v.model || v.name} ({v.year})
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
+                        {v.plate || v.licensePlate || 'S/P'}
+                      </td>
+                      <td className="py-3.5 px-4">{v.category?.name || 'General'}</td>
+                      <td className="py-3.5 px-4">{v.transmission || 'AUTOMATICA'}</td>
+                      <td className="py-3.5 px-4 font-bold text-luxem-night">
+                        ${rate.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4 text-gray-500">
+                        ${deposit.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                            currentStatus === 'OPERATIVO' || currentStatus === 'DISPONIBLE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : currentStatus === 'EN_MANTENIMIENTO' || currentStatus === 'MANTENIMIENTO'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}
                         >
-                          Disponible
-                        </button>
-                      )}
-                      {v.status !== 'MANTENIMIENTO' && (
-                        <button
-                          onClick={() => handleUpdateStatus(v.id, 'MANTENIMIENTO')}
-                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md text-[10px] font-bold"
-                        >
-                          Taller
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                          {currentStatus}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-1">
+                        {currentStatus !== 'OPERATIVO' && currentStatus !== 'DISPONIBLE' && (
+                          <button
+                            onClick={() => handleUpdateStatus(v.id, 'OPERATIVO')}
+                            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md text-[10px] font-bold"
+                          >
+                            Disponible
+                          </button>
+                        )}
+                        {currentStatus !== 'EN_MANTENIMIENTO' && currentStatus !== 'MANTENIMIENTO' && (
+                          <button
+                            onClick={() => handleUpdateStatus(v.id, 'EN_MANTENIMIENTO')}
+                            className="bg-amber-50 hover:bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md text-[10px] font-bold"
+                          >
+                            Taller
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
