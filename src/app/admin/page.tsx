@@ -41,18 +41,42 @@ export default function AdminDashboardPage() {
         if (!res.ok) throw new Error('Error al cargar métricas');
         return res.json();
       })
-      .then((data) => setMetrics(data))
+      .then((data: any) => {
+        setMetrics({
+          fleet: {
+            total: data?.fleet?.total ?? 0,
+            available: data?.fleet?.available ?? 0,
+            rented: data?.fleet?.rented ?? 0,
+            maintenance: data?.fleet?.maintenance ?? data?.fleet?.inMaintenance ?? 0,
+          },
+          requests: {
+            pendingReview: data?.requests?.pendingReview ?? 0,
+            incompleteDocs: data?.requests?.incompleteDocs ?? 0,
+            totalThisMonth: data?.requests?.totalThisMonth ?? 0,
+          },
+          reservations: {
+            active: data?.reservations?.active ?? data?.fleet?.rented ?? 0,
+            confirmed: data?.reservations?.confirmed ?? (Array.isArray(data?.upcomingPickups) ? data.upcomingPickups.length : 0),
+            completedThisMonth: data?.reservations?.completedThisMonth ?? 0,
+          },
+          financials: {
+            totalRevenueCents: data?.financials?.totalRevenueCents ?? (data?.financial?.monthlyIncomeNum ? Math.round(data.financial.monthlyIncomeNum * 100) : 0),
+            pendingBalanceCents: data?.financials?.pendingBalanceCents ?? (data?.financial?.totalPendingBalanceNum ? Math.round(data.financial.totalPendingBalanceNum * 100) : 0),
+            thisMonthRevenueCents: data?.financials?.thisMonthRevenueCents ?? (data?.financial?.monthlyIncomeNum ? Math.round(data.financial.monthlyIncomeNum * 100) : 0),
+          },
+        });
+      })
       .catch((err) => {
         console.error(err);
         // Fallback default metrics
         setMetrics({
-          fleet: { total: 12, available: 8, rented: 3, maintenance: 1 },
-          requests: { pendingReview: 4, incompleteDocs: 1, totalThisMonth: 18 },
-          reservations: { active: 3, confirmed: 5, completedThisMonth: 14 },
+          fleet: { total: 0, available: 0, rented: 0, maintenance: 0 },
+          requests: { pendingReview: 0, incompleteDocs: 0, totalThisMonth: 0 },
+          reservations: { active: 0, confirmed: 0, completedThisMonth: 0 },
           financials: {
-            totalRevenueCents: 452000,
-            pendingBalanceCents: 120000,
-            thisMonthRevenueCents: 185000,
+            totalRevenueCents: 0,
+            pendingBalanceCents: 0,
+            thisMonthRevenueCents: 0,
           },
         });
       })
