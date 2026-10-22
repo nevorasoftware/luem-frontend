@@ -201,7 +201,7 @@ export default function AdminDashboardPage() {
           <div>
             <h3 className="text-lg font-bold mb-2">Acceso Rápido</h3>
             <p className="text-xs text-luxem-silver/70 mb-6">
-              Herramientas frecuentes para el equipo de operaciones de LUXEM.
+              Herramientas frecuentes para el equipo de operaciones de LUEM.
             </p>
 
             <div className="space-y-2">
@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="pt-6 border-t border-white/10 text-[11px] text-luxem-silver/50">
-            LUXEM Car Rental System v1.0 · Producción El Salvador
+            LUEM Car Rental System v1.0 · Producción El Salvador
           </div>
         </div>
       </div>

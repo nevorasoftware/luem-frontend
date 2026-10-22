@@ -1,7 +1,7 @@
 {
   "name": "luem-frontend",
   "version": "1.0.0",
-  "description": "Plataforma Web LUXEM RENT A CAR (Next.js, React, Tailwind CSS, TypeScript)",
+  "description": "Plataforma Web LUEM RENT A CAR (Next.js, React, Tailwind CSS, TypeScript)",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",

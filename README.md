@@ -1,6 +1,6 @@
-# LUXEM Rent a Car — Frontend Web Application
+# LUEM Rent a Car — Frontend Web Application
 
-Plataforma web moderna, reactiva y elegante para la reserva de vehículos y administración de flota para **LUXEM Rent a Car** en El Salvador.
+Plataforma web moderna, reactiva y elegante para la reserva de vehículos y administración de flota para **LUEM Rent a Car** en El Salvador.
 
 Desarrollada con **Next.js 15**, **React 19**, **Tailwind CSS 3** y **TypeScript**.
 

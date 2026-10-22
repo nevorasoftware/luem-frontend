@@ -9,9 +9,9 @@ export default function AdminSettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Business Parameters
-  const [businessName, setBusinessName] = useState('LUXEM RENT A CAR');
+  const [businessName, setBusinessName] = useState('LUEM RENT A CAR');
   const [taxId, setTaxId] = useState('0614-010190-101-1');
-  const [email, setEmail] = useState('reservas@luxemrentacar.com');
+  const [email, setEmail] = useState('reservas@luemrentacar.com');
   const [phone, setPhone] = useState('+503 2200-1122');
   const [whatsapp, setWhatsapp] = useState('+503 7000-0000');
   const [address, setAddress] = useState('Colonia Escalón, Paseo General Escalón #4500, San Salvador');

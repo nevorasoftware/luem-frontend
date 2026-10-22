@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
           </div>
           <h1 className="text-2xl font-black text-luxem-night">Panel Administrativo</h1>
           <p className="text-xs text-luxem-night/60 mt-1">
-            LUXEM RENT A CAR · Acceso Restringido
+            LUEM RENT A CAR · Acceso Restringido
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@luxemrentacar.com"
+                placeholder="admin@luemrentacar.com"
                 className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-luxem-primary"
                 required
               />
@@ -104,7 +104,7 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="mt-8 pt-6 border-t text-center text-xs text-gray-400">
-          Credenciales por defecto: <code>admin@luxemrentacar.com</code> / <code>Admin123456!</code>
+          Credenciales por defecto: <code>admin@luemrentacar.com</code> / <code>Admin123456!</code>
         </div>
       </div>
     </div>

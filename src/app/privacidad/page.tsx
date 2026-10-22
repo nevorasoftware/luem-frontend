@@ -10,7 +10,7 @@ export default function PrivacyPage() {
             <Lock className="w-8 h-8 text-luxem-accent" />
             <div>
               <h1 className="text-3xl font-black text-luxem-night">Política de Privacidad y Tratamiento de Datos</h1>
-              <p className="text-xs text-luxem-night/60">Compromiso de Confidencialidad y Seguridad · LUXEM RENT A CAR</p>
+              <p className="text-xs text-luxem-night/60">Compromiso de Confidencialidad y Seguridad · LUEM RENT A CAR</p>
             </div>
           </div>
 
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-luxem-night mb-2">1. Recopilación de Documentos de Identidad</h2>
               <p>
-                Para la prestación segura del servicio de arrendamiento vehicular y en cumplimiento de regulaciones aseguradoras y comerciales en El Salvador, LUXEM RENT A CAR recopila imágenes digitales de su DUI o Pasaporte, Licencia de Conducir y Comprobante de Domicilio.
+                Para la prestación segura del servicio de arrendamiento vehicular y en cumplimiento de regulaciones aseguradoras y comerciales en El Salvador, LUEM RENT A CAR recopila imágenes digitales de su DUI o Pasaporte, Licencia de Conducir y Comprobante de Domicilio.
               </p>
             </section>
 
@@ -32,14 +32,14 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-lg font-bold text-luxem-night mb-2">3. No Divulgación a Terceros</h2>
               <p>
-                LUXEM no vende, comercializa ni comparte su información personal ni documentos de identidad con empresas de mercadeo u otras organizaciones ajenas a la relación contractual, salvo mandato judicial expreso de autoridades competentes de la República de El Salvador o la compañía aseguradora en caso de siniestro.
+                LUEM no vende, comercializa ni comparte su información personal ni documentos de identidad con empresas de mercadeo u otras organizaciones ajenas a la relación contractual, salvo mandato judicial expreso de autoridades competentes de la República de El Salvador o la compañía aseguradora en caso de siniestro.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-bold text-luxem-night mb-2">4. Derechos del Titular de los Datos</h2>
               <p>
-                Usted tiene derecho a consultar, rectificar o solicitar la eliminación de sus datos personales una vez concluido el período legal de retención tributaria y contractual estipulado por la legislación salvadoreña escribiendo a <strong>privacidad@luxemrentacar.com</strong>.
+                Usted tiene derecho a consultar, rectificar o solicitar la eliminación de sus datos personales una vez concluido el período legal de retención tributaria y contractual estipulado por la legislación salvadoreña escribiendo a <strong>privacidad@luemrentacar.com</strong>.
               </p>
             </section>
           </div>

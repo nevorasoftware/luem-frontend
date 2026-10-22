@@ -449,11 +449,11 @@ function TrackingContent() {
                   WhatsApp Soporte
                 </a>
                 <a
-                  href="mailto:soporte@luxemrentacar.com"
+                  href="mailto:soporte@luemrentacar.com"
                   className="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3 rounded-xl transition flex items-center gap-2 text-sm"
                 >
                   <Mail className="w-4 h-4" />
-                  soporte@luxemrentacar.com
+                  soporte@luemrentacar.com
                 </a>
               </div>
             </div>

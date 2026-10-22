@@ -8,6 +8,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        luem: {
+          night: '#0B1220', // Azul noche
+          primary: '#1769AA', // Azul corporativo
+          accent: '#299BEB', // Azul eléctrico acento
+          silver: '#C7D0DA', // Plata
+          bg: '#F4F6F8', // Gris claro para fondos
+        },
         luxem: {
           night: '#0B1220', // Azul noche
           primary: '#1769AA', // Azul corporativo

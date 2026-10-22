@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-8 h-8 rounded-lg bg-luxem-primary flex items-center justify-center font-bold text-sm">
             LX
           </div>
-          <span className="font-bold text-sm">LUXEM Admin</span>
+          <span className="font-bold text-sm">LUEM Admin</span>
         </div>
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -88,7 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             LX
           </div>
           <div>
-            <div className="font-extrabold text-sm tracking-wider text-white">LUXEM</div>
+            <div className="font-extrabold text-sm tracking-wider text-white">LUEM</div>
             <div className="text-[10px] text-luxem-silver/70 font-semibold uppercase tracking-widest">
               Backoffice
             </div>

@@ -14,7 +14,7 @@ export default function Footer() {
                 <Car className="w-5 h-5 text-white" />
               </div>
               <span className="text-2xl font-black tracking-wider text-white">
-                LUXEM
+                LUEM
               </span>
             </div>
             <p className="text-sm leading-relaxed text-gray-400">
@@ -105,7 +105,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-[#299BEB] shrink-0" />
-                <span>contacto@luxemrentacar.com</span>
+                <span>contacto@luemrentacar.com</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-[#299BEB] shrink-0" />
@@ -116,7 +116,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between text-xs text-gray-500">
-          <p>© {new Date().getFullYear()} LUXEM RENT A CAR. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} LUEM RENT A CAR. Todos los derechos reservados.</p>
           <p className="mt-2 md:mt-0 flex items-center gap-2">
             <Shield className="w-3.5 h-3.5 text-[#299BEB]" />
             <span>Alquiler seguro con documentación verificada</span>

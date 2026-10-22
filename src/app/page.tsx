@@ -80,7 +80,7 @@ export default function HomePage() {
 
   const faqs = [
     {
-      q: '¿Cuáles son los requisitos obligatorios para alquilar un vehículo en LUXEM?',
+      q: '¿Cuáles son los requisitos obligatorios para alquilar un vehículo en LUEM?',
       a: 'Debe ser mayor de 21 años, contar con DUI o Pasaporte vigente, Licencia de conducir válida y un comprobante de domicilio reciente (recibo de luz o agua). Los documentos se cargan digitalmente en nuestra plataforma para su validación previa.',
     },
     {
@@ -120,7 +120,7 @@ export default function HomePage() {
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
               Tu Viaje por El Salvador Comienza con{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#299BEB] via-[#C7D0DA] to-white">
-                LUXEM
+                LUEM
               </span>
             </h1>
 
@@ -326,7 +326,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-xs font-bold uppercase tracking-widest text-[#1769AA]">
-              ¿Por Qué Elegir LUXEM?
+              ¿Por Qué Elegir LUEM?
             </span>
             <h2 className="text-3xl font-extrabold text-[#0B1220] tracking-tight mt-1">
               Tranquilidad y Calidad en Cada Kilómetro

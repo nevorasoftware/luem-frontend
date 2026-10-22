@@ -305,7 +305,7 @@ function BookingContent() {
 
             <h1 className="text-3xl font-bold text-luxem-night mb-2">¡Solicitud Recibida con Éxito!</h1>
             <p className="text-luxem-night/70 mb-8">
-              Tu solicitud ha sido registrada en el sistema de LUXEM Rent a Car. Nuestro equipo verificará tu documentación y te notificará por correo electrónico y WhatsApp en menos de 2 horas hábiles.
+              Tu solicitud ha sido registrada en el sistema de LUEM Rent a Car. Nuestro equipo verificará tu documentación y te notificará por correo electrónico y WhatsApp en menos de 2 horas hábiles.
             </p>
 
             <div className="bg-luxem-night text-white rounded-2xl p-6 mb-8 text-left">
