@@ -1,0 +1,4 @@
+# Robots.txt for LUEM Rent a Car
+User-agent: *
+Allow: /
+Disallow: /admin/
