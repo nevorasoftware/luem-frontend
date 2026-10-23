@@ -29,6 +29,13 @@ export default function AdminLoginPage() {
         throw new Error(data.message || (res.status === 502 || res.status === 500 ? 'No se pudo conectar con el servidor backend' : 'Credenciales incorrectas'));
       }
 
+      if (data.token) {
+        localStorage.setItem('luem_admin_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('luem_admin_user', JSON.stringify(data.user));
+      }
+
       router.push('/admin');
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');

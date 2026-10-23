@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Settings, Save, CheckCircle2, Building, Mail, Phone, MapPin, DollarSign, Loader2 } from 'lucide-react';
+import { getAuthHeaders } from '@/lib/auth';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -43,7 +44,7 @@ export default function AdminSettingsPage() {
     try {
       const res = await fetch('/api/settings', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           businessName,
           taxId,

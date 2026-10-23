@@ -30,7 +30,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (isLoginPage) return;
 
-    fetch('/api/auth/me')
+    const headers: Record<string, string> = {};
+    const token = typeof window !== 'undefined' ? localStorage.getItem('luem_admin_token') : null;
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    fetch('/api/auth/me', { headers })
       .then((res) => {
         if (!res.ok) {
           router.push('/admin/login');
@@ -38,8 +42,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
         return res.json();
       })
-      .then((user) => {
-        if (user) setCurrentUser(user);
+      .then((data) => {
+        if (data) {
+          const profile = data.user || data;
+          setCurrentUser({
+            name: profile.fullName || profile.name || 'Administrador',
+            role: profile.role || 'ADMIN',
+            email: profile.email || '',
+          });
+        }
       })
       .catch(() => {
         router.push('/admin/login');
@@ -48,8 +59,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const headers: Record<string, string> = {};
+      const token = typeof window !== 'undefined' ? localStorage.getItem('luem_admin_token') : null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      await fetch('/api/auth/logout', { method: 'POST', headers });
     } finally {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('luem_admin_token');
+        localStorage.removeItem('luem_admin_user');
+      }
       router.push('/admin/login');
     }
   };
