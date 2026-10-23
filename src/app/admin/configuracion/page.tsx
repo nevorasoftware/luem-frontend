@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Save, CheckCircle2, Building, Mail, Phone, MapPin, DollarSign, Loader2 } from 'lucide-react';
+import { 
+  Building, Phone, DollarSign, Loader2, CheckCircle2, AlertCircle, Save 
+} from 'lucide-react';
 import { getAuthHeaders } from '@/lib/auth';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Business Parameters
   const [businessName, setBusinessName] = useState('LUEM RENT A CAR');
@@ -20,51 +22,101 @@ export default function AdminSettingsPage() {
   const [defaultSecurityDeposit, setDefaultSecurityDeposit] = useState('400');
 
   useEffect(() => {
-    fetch('/api/settings/public')
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then((data) => {
-        if (data.businessName) setBusinessName(data.businessName);
-        if (data.email) setEmail(data.email);
-        if (data.phone) setPhone(data.phone);
-        if (data.whatsapp) setWhatsapp(data.whatsapp);
-        if (data.address) setAddress(data.address);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetchSettings();
   }, []);
+
+  const showFeedback = (type: 'success' | 'error', message: string) => {
+    setFeedback({ type, message });
+    if (type === 'success') {
+      setTimeout(() => setFeedback(null), 5000);
+    }
+  };
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      let res = await fetch('/api/settings/admin', { headers: getAuthHeaders() });
+      if (!res.ok) {
+        res = await fetch('/api/settings/public');
+      }
+      if (res.ok) {
+        const data = await res.json();
+        const bInfo = data.business_info || {};
+        const rPolicy = data.rental_policy || {};
+        const fInfo = data.fiscal_info || {};
+
+        if (data.businessName || bInfo.companyName) {
+          setBusinessName(data.businessName || bInfo.companyName);
+        }
+        if (data.taxId || bInfo.taxId || fInfo.taxId) {
+          setTaxId(data.taxId || bInfo.taxId || fInfo.taxId);
+        }
+        if (data.email || bInfo.email) {
+          setEmail(data.email || bInfo.email);
+        }
+        if (data.phone || bInfo.phone) {
+          setPhone(data.phone || bInfo.phone);
+        }
+        if (data.whatsapp || bInfo.whatsapp) {
+          setWhatsapp(data.whatsapp || bInfo.whatsapp);
+        }
+        if (data.address || bInfo.address) {
+          setAddress(data.address || bInfo.address);
+        }
+        if (data.ivaRate !== undefined || fInfo.ivaRate !== undefined) {
+          setIvaRate(String(data.ivaRate ?? fInfo.ivaRate ?? 13));
+        }
+
+        const deposit = data.defaultSecurityDeposit ?? data.depositAmount ?? rPolicy.depositAmount;
+        if (deposit !== undefined) {
+          const num = Number(deposit);
+          setDefaultSecurityDeposit(String(num > 1000 ? num / 100 : num));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      showFeedback('error', 'Error al cargar configuración actual');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setSavedSuccess(false);
+    setFeedback(null);
 
     try {
+      const depositVal = parseFloat(defaultSecurityDeposit);
+      if (isNaN(depositVal) || depositVal < 0) {
+        throw new Error('El monto del depósito en garantía debe ser un número válido mayor o igual a 0');
+      }
+
       const res = await fetch('/api/settings', {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          businessName,
-          taxId,
-          email,
-          phone,
-          whatsapp,
-          address,
-          ivaRate: parseFloat(ivaRate),
-          defaultSecurityDeposit: parseFloat(defaultSecurityDeposit) * 100,
+          businessName: businessName.trim(),
+          taxId: taxId.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          whatsapp: whatsapp.trim(),
+          address: address.trim(),
+          ivaRate: parseFloat(ivaRate) || 13,
+          defaultSecurityDeposit: depositVal,
+          depositAmount: depositVal,
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        throw new Error('Error al actualizar configuración');
+        throw new Error(data.message || 'Error al actualizar configuración en el servidor');
       }
 
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 4000);
+      showFeedback('success', '¡Parámetros comerciales y depósito de garantía actualizados correctamente!');
     } catch (err: any) {
-      alert(err.message || 'Error al guardar');
+      showFeedback('error', err.message || 'Error al guardar configuración');
     } finally {
       setSaving(false);
     }
@@ -88,10 +140,20 @@ export default function AdminSettingsPage() {
         </p>
       </div>
 
-      {savedSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          ¡Parámetros comerciales actualizados correctamente!
+      {feedback && (
+        <div
+          className={`p-4 rounded-2xl border text-xs font-bold flex items-center gap-2 animate-fadeIn ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-red-50 border-red-200 text-red-900'
+          }`}
+        >
+          {feedback.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+          )}
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -186,6 +248,7 @@ export default function AdminSettingsPage() {
               <label className="font-bold text-gray-700 block mb-1">Tasa de IVA en El Salvador (%)</label>
               <input
                 type="number"
+                step="0.01"
                 value={ivaRate}
                 onChange={(e) => setIvaRate(e.target.value)}
                 className="w-full px-3 py-2 border rounded-xl"
@@ -194,14 +257,20 @@ export default function AdminSettingsPage() {
               <span className="text-[10px] text-gray-400">13% establecido por ley.</span>
             </div>
             <div>
-              <label className="font-bold text-gray-700 block mb-1">Depósito Base en Garantía (USD)</label>
+              <label className="font-bold text-gray-700 block mb-1">Depósito Base en Garantía (USD) *</label>
               <input
                 type="number"
+                step="0.01"
+                min="0"
                 value={defaultSecurityDeposit}
                 onChange={(e) => setDefaultSecurityDeposit(e.target.value)}
-                className="w-full px-3 py-2 border rounded-xl"
+                placeholder="400"
+                className="w-full px-3 py-2 border rounded-xl font-bold text-luxem-primary"
                 required
               />
+              <span className="text-[10px] text-gray-400">
+                Monto base de garantía que se aplica a los contratos y cotizaciones.
+              </span>
             </div>
           </div>
         </div>
@@ -210,10 +279,19 @@ export default function AdminSettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-luxem-primary hover:bg-luxem-accent text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-md"
+            className="bg-luxem-primary hover:bg-luxem-accent disabled:opacity-50 text-white px-6 py-3 rounded-xl font-bold transition flex items-center gap-2 shadow-md"
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Guardar Configuración
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Guardando configuración...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                Guardar Configuración
+              </>
+            )}
           </button>
         </div>
       </form>
