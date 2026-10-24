@@ -55,7 +55,7 @@ export default function AdminMaintenancePage() {
   const [type, setType] = useState('PREVENTIVO');
   const [description, setDescription] = useState('');
   const [provider, setProvider] = useState('');
-  const [cost, setCost] = useState('75');
+  const [cost, setCost] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [odometerKm, setOdometerKm] = useState('');

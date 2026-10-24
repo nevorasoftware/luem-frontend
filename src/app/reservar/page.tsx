@@ -6,18 +6,29 @@ import {
   Car, Calendar, MapPin, Upload, CheckCircle2, AlertCircle, FileText, 
   ShieldCheck, ArrowRight, ArrowLeft, Loader2, Info, User, Phone, Mail, CreditCard 
 } from 'lucide-react';
+import { formatUSD } from '@/lib/utils';
 
 interface Vehicle {
   id: string;
-  name: string;
+  name?: string;
   brand: string;
   model: string;
   year: number;
   slug: string;
-  dailyPrice: number;
-  securityDeposit: number;
+  dailyRate?: string;
+  dailyPrice?: number;
+  securityDeposit?: number;
+  depositAmount?: string | number;
   category: { name: string };
   coverImageUrl?: string;
+  photos?: Array<{ id: string; url: string; alt?: string }>;
+}
+
+interface LocationItem {
+  id: string;
+  name: string;
+  code?: string;
+  fee?: string | number;
 }
 
 interface Extra {
@@ -41,14 +52,15 @@ interface QuoteResponse {
   taxAmount: number;
   total: number;
   securityDeposit: number;
+  billableDays?: number;
+  dailyRateCents?: number;
+  baseAmountCents?: number;
+  discountTotalCents?: number;
+  extrasTotalCents?: number;
+  feesTotalCents?: number;
+  totalCents?: number;
+  depositRequiredCents?: number;
 }
-
-const LOCATIONS = [
-  { id: 'SAL_AEROPUERTO', name: 'Aeropuerto Int. San Óscar Arnulfo Romero (SAL)' },
-  { id: 'SAN_SALVADOR', name: 'Oficina Central San Salvador (Col. Escalón)' },
-  { id: 'SANTA_ANA', name: 'Sucursal Santa Ana (Metrocentro)' },
-  { id: 'SAN_MIGUEL', name: 'Sucursal San Miguel (Av. Roosevelt)' },
-];
 
 function BookingContent() {
   const searchParams = useSearchParams();
@@ -57,6 +69,7 @@ function BookingContent() {
   const [step, setStep] = useState<number>(1);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
+  const [locations, setLocations] = useState<LocationItem[]>([]);
   const [loadingInitial, setLoadingInitial] = useState(true);
 
   // Form state
@@ -65,8 +78,8 @@ function BookingContent() {
   const [pickupTime, setPickupTime] = useState<string>('10:00');
   const [returnDate, setReturnDate] = useState<string>('');
   const [returnTime, setReturnTime] = useState<string>('10:00');
-  const [pickupLocation, setPickupLocation] = useState<string>('SAL_AEROPUERTO');
-  const [returnLocation, setReturnLocation] = useState<string>('SAL_AEROPUERTO');
+  const [pickupLocation, setPickupLocation] = useState<string>('');
+  const [returnLocation, setReturnLocation] = useState<string>('');
   const [flightNumber, setFlightNumber] = useState<string>('');
   const [selectedExtras, setSelectedExtras] = useState<string[]>([]);
 
@@ -102,13 +115,14 @@ function BookingContent() {
     accessToken: string;
   } | null>(null);
 
-  // Prepopulate from URL params
+  // Prepopulate from URL params and load backend databases
   useEffect(() => {
     async function loadData() {
       try {
-        const [vehRes, extRes] = await Promise.all([
-          fetch('/api/fleet/vehicles').then((r) => r.json()).catch(() => []),
-          fetch('/api/fleet/extras').then((r) => r.json()).catch(() => []),
+        const [vehRes, extRes, locRes] = await Promise.all([
+          fetch('/api/fleet/vehicles').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+          fetch('/api/fleet/extras').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+          fetch('/api/fleet/locations').then((r) => (r.ok ? r.json() : [])).catch(() => []),
         ]);
 
         const vehList: Vehicle[] = Array.isArray(vehRes) ? vehRes : vehRes.vehicles || [];
@@ -117,7 +131,11 @@ function BookingContent() {
         const extList: Extra[] = Array.isArray(extRes) ? extRes : extRes.extras || [];
         setExtras(extList);
 
-        const initialSlug = searchParams.get('vehiculo');
+        const locList: LocationItem[] = Array.isArray(locRes) ? locRes : [];
+        setLocations(locList);
+
+        // Vehicle matching
+        const initialSlug = searchParams.get('vehiculo') || searchParams.get('vehicleId');
         if (initialSlug && vehList.length > 0) {
           const match = vehList.find((v) => v.slug === initialSlug || v.id === initialSlug);
           if (match) setSelectedVehicleId(match.id);
@@ -125,16 +143,45 @@ function BookingContent() {
           setSelectedVehicleId(vehList[0].id);
         }
 
-        const paramPickup = searchParams.get('pickup');
-        const paramReturn = searchParams.get('return');
-        if (paramPickup) setPickupDate(paramPickup);
-        if (paramReturn) setReturnDate(paramReturn);
+        // Location matching
+        const paramPickupLoc = searchParams.get('pickupLocationId') || searchParams.get('loc');
+        const paramReturnLoc = searchParams.get('returnLocationId') || paramPickupLoc;
+        if (paramPickupLoc && locList.some((l) => l.id === paramPickupLoc)) {
+          setPickupLocation(paramPickupLoc);
+        } else if (locList.length > 0) {
+          setPickupLocation(locList[0].id);
+        }
 
-        if (!paramPickup) {
+        if (paramReturnLoc && locList.some((l) => l.id === paramReturnLoc)) {
+          setReturnLocation(paramReturnLoc);
+        } else if (locList.length > 0) {
+          setReturnLocation(locList[0].id);
+        }
+
+        // Dates matching
+        const paramPickup = searchParams.get('pickup') || searchParams.get('pickupAt');
+        const paramReturn = searchParams.get('return') || searchParams.get('returnAt');
+        if (paramPickup) {
+          try {
+            const d = new Date(paramPickup);
+            setPickupDate(d.toISOString().split('T')[0]);
+            const timePart = paramPickup.includes('T') ? paramPickup.split('T')[1] : null;
+            if (timePart) setPickupTime(timePart.slice(0, 5));
+          } catch {}
+        } else {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           setPickupDate(tomorrow.toISOString().split('T')[0]);
+        }
 
+        if (paramReturn) {
+          try {
+            const d = new Date(paramReturn);
+            setReturnDate(d.toISOString().split('T')[0]);
+            const timePart = paramReturn.includes('T') ? paramReturn.split('T')[1] : null;
+            if (timePart) setReturnTime(timePart.slice(0, 5));
+          } catch {}
+        } else {
           const end = new Date();
           end.setDate(end.getDate() + 4);
           setReturnDate(end.toISOString().split('T')[0]);
@@ -155,19 +202,19 @@ function BookingContent() {
     async function fetchQuote() {
       setLoadingQuote(true);
       try {
-        const pickupStr = `${pickupDate}T${pickupTime}:00`;
-        const returnStr = `${returnDate}T${returnTime}:00`;
+        const pickupStr = `${pickupDate}T${pickupTime}:00Z`;
+        const returnStr = `${returnDate}T${returnTime}:00Z`;
 
         const res = await fetch('/api/fleet/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             vehicleId: selectedVehicleId,
-            pickupDate: pickupStr,
-            returnDate: returnStr,
-            pickupLocation,
-            returnLocation,
-            extraIds: selectedExtras,
+            pickupAt: pickupStr,
+            returnAt: returnStr,
+            pickupLocationId: pickupLocation || undefined,
+            returnLocationId: returnLocation || undefined,
+            extras: selectedExtras.map((id) => ({ extraId: id, quantity: 1 })),
           }),
         });
 
@@ -233,31 +280,32 @@ function BookingContent() {
     try {
       const formData = new FormData();
       formData.append('vehicleId', selectedVehicleId);
-      formData.append('pickupDate', `${pickupDate}T${pickupTime}:00`);
-      formData.append('returnDate', `${returnDate}T${returnTime}:00`);
-      formData.append('pickupLocation', pickupLocation);
-      formData.append('returnLocation', returnLocation);
+      formData.append('pickupAt', `${pickupDate}T${pickupTime}:00Z`);
+      formData.append('returnAt', `${returnDate}T${returnTime}:00Z`);
+      if (pickupLocation) formData.append('pickupLocationId', pickupLocation);
+      if (returnLocation) formData.append('returnLocationId', returnLocation);
       if (flightNumber) formData.append('flightNumber', flightNumber);
 
       formData.append('fullName', fullName);
-      formData.append('documentNumber', documentNumber);
+      formData.append('dui', documentNumber);
       formData.append('email', email);
       formData.append('phone', phone);
       if (birthDate) formData.append('birthDate', birthDate);
-      formData.append('driverLicenseNumber', driverLicenseNumber);
-      formData.append('licenseExpiryDate', licenseExpiryDate);
+      formData.append('licenseNumber', driverLicenseNumber);
+      if (licenseExpiryDate) formData.append('licenseExpiryDate', licenseExpiryDate);
       if (address) formData.append('address', address);
       if (emergencyContactName) formData.append('emergencyContactName', emergencyContactName);
       if (emergencyContactPhone) formData.append('emergencyContactPhone', emergencyContactPhone);
-      if (comments) formData.append('comments', comments);
+      if (comments) formData.append('customerNotes', comments);
+      formData.append('privacyAccepted', 'true');
 
       selectedExtras.forEach((id) => formData.append('extraIds[]', id));
 
       // Append files
-      formData.append('duiFront', duiFront);
-      formData.append('duiBack', duiBack);
-      formData.append('licenseFront', licenseFront);
-      formData.append('utilityBill', utilityBill);
+      if (duiFront) formData.append('duiFront', duiFront);
+      if (duiBack) formData.append('duiBack', duiBack);
+      if (licenseFront) formData.append('licenseFront', licenseFront);
+      if (utilityBill) formData.append('utilityBill', utilityBill);
 
       const res = await fetch('/api/requests/public', {
         method: 'POST',
@@ -412,29 +460,39 @@ function BookingContent() {
                       Vehículo Seleccionado
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {vehicles.map((v) => (
-                        <div
-                          key={v.id}
-                          onClick={() => setSelectedVehicleId(v.id)}
-                          className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex items-center gap-3 ${
-                            selectedVehicleId === v.id
-                              ? 'border-luxem-primary bg-luxem-primary/5 shadow-sm'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-bold text-luxem-primary">
-                            <Car className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold text-luxem-night truncate">
-                              {v.brand} {v.name}
+                      {vehicles.length > 0 ? (
+                        vehicles.map((v) => (
+                          <div
+                            key={v.id}
+                            onClick={() => setSelectedVehicleId(v.id)}
+                            className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex items-center gap-3 ${
+                              selectedVehicleId === v.id
+                                ? 'border-luxem-primary bg-luxem-primary/5 shadow-sm'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center font-bold text-luxem-primary overflow-hidden">
+                              {v.photos && v.photos[0] ? (
+                                <img src={v.photos[0].url} alt={v.model} className="w-full h-full object-cover" />
+                              ) : (
+                                <Car className="w-6 h-6" />
+                              )}
                             </div>
-                            <div className="text-xs text-luxem-night/60">
-                              ${(v.dailyPrice / 100).toFixed(2)}/día · {v.category.name}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-bold text-luxem-night truncate">
+                                {v.brand} {v.model || v.name}
+                              </div>
+                              <div className="text-xs text-luxem-night/60">
+                                {v.dailyRate ? formatUSD(v.dailyRate) : `$${Number(v.dailyPrice || 0).toFixed(2)}`}/día · {v.category?.name || 'General'}
+                              </div>
                             </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="col-span-2 p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+                          No hay vehículos registrados en la flota actualmente.
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
 
@@ -495,11 +553,15 @@ function BookingContent() {
                         onChange={(e) => setPickupLocation(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-luxem-primary text-sm font-medium bg-white"
                       >
-                        {LOCATIONS.map((loc) => (
-                          <option key={loc.id} value={loc.id}>
-                            {loc.name}
-                          </option>
-                        ))}
+                        {locations.length > 0 ? (
+                          locations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.name}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Oficina Principal / Según disponibilidad</option>
+                        )}
                       </select>
                     </div>
                     <div>
@@ -511,16 +573,20 @@ function BookingContent() {
                         onChange={(e) => setReturnLocation(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-luxem-primary text-sm font-medium bg-white"
                       >
-                        {LOCATIONS.map((loc) => (
-                          <option key={loc.id} value={loc.id}>
-                            {loc.name}
-                          </option>
-                        ))}
+                        {locations.length > 0 ? (
+                          locations.map((loc) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.name}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="">Oficina Principal / Según disponibilidad</option>
+                        )}
                       </select>
                     </div>
                   </div>
 
-                  {pickupLocation === 'SAL_AEROPUERTO' && (
+                  {locations.find((l) => l.id === pickupLocation)?.name.toLowerCase().includes('aeropuerto') && (
                     <div>
                       <label className="block text-xs font-bold text-luxem-night/70 uppercase tracking-wider mb-2">
                         Número de Vuelo (Opcional - Monitoreamos retrasos)
@@ -567,8 +633,8 @@ function BookingContent() {
                             </div>
                             <span className="text-xs font-bold text-luxem-primary">
                               {extra.pricePerDay > 0
-                                ? `+$${(extra.pricePerDay / 100).toFixed(2)}/día`
-                                : `+$${(extra.flatFee / 100).toFixed(2)} tarifa única`}
+                                ? `+${formatUSD(extra.pricePerDay)}/día`
+                                : `+${formatUSD(extra.flatFee || 0)} tarifa única`}
                             </span>
                           </label>
                         ))}
@@ -959,7 +1025,7 @@ function BookingContent() {
                 <div className="flex justify-between">
                   <span className="text-luxem-night/60">Lugar Entrega:</span>
                   <span className="font-semibold text-right max-w-[160px] truncate">
-                    {LOCATIONS.find((l) => l.id === pickupLocation)?.name}
+                    {locations.find((l) => l.id === pickupLocation)?.name || 'Oficina Principal'}
                   </span>
                 </div>
               </div>
@@ -973,43 +1039,43 @@ function BookingContent() {
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs text-luxem-night/70">
                     <span>Días de alquiler:</span>
-                    <span className="font-bold text-luxem-night">{quote.rentalDays} días</span>
+                    <span className="font-bold text-luxem-night">{quote.rentalDays || quote.billableDays || 0} días</span>
                   </div>
                   <div className="flex justify-between text-xs text-luxem-night/70">
                     <span>Tarifa diaria:</span>
-                    <span>${(quote.dailyRate / 100).toFixed(2)}/día</span>
+                    <span>{formatUSD((quote.dailyRate || quote.dailyRateCents || 0) / 100)}/día</span>
                   </div>
                   <div className="flex justify-between text-xs text-luxem-night/70">
                     <span>Subtotal días:</span>
-                    <span>${(quote.daysSubtotal / 100).toFixed(2)}</span>
+                    <span>{formatUSD((quote.daysSubtotal || quote.baseAmountCents || 0) / 100)}</span>
                   </div>
-                  {quote.volumeDiscountAmount > 0 && (
+                  {(quote.volumeDiscountAmount || quote.discountTotalCents || 0) > 0 && (
                     <div className="flex justify-between text-xs text-emerald-600 font-semibold">
                       <span>Descuento por volumen:</span>
-                      <span>-${(quote.volumeDiscountAmount / 100).toFixed(2)}</span>
+                      <span>-{formatUSD((quote.volumeDiscountAmount || quote.discountTotalCents || 0) / 100)}</span>
                     </div>
                   )}
-                  {quote.extrasTotal > 0 && (
+                  {(quote.extrasTotal || quote.extrasTotalCents || 0) > 0 && (
                     <div className="flex justify-between text-xs text-luxem-night/70">
                       <span>Adicionales:</span>
-                      <span>+${(quote.extrasTotal / 100).toFixed(2)}</span>
+                      <span>+{formatUSD((quote.extrasTotal || quote.extrasTotalCents || 0) / 100)}</span>
                     </div>
                   )}
-                  {quote.locationFee > 0 && (
+                  {(quote.locationFee || quote.feesTotalCents || 0) > 0 && (
                     <div className="flex justify-between text-xs text-luxem-night/70">
                       <span>Cargo de entrega:</span>
-                      <span>+${(quote.locationFee / 100).toFixed(2)}</span>
+                      <span>+{formatUSD((quote.locationFee || quote.feesTotalCents || 0) / 100)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-xs text-luxem-night/70">
                     <span>IVA (13%):</span>
-                    <span>${(quote.taxAmount / 100).toFixed(2)}</span>
+                    <span>{formatUSD((quote.taxAmount || 0) / 100)}</span>
                   </div>
 
                   <div className="border-t pt-3 flex justify-between items-baseline">
                     <span className="font-bold text-sm text-luxem-night">Total Arrendamiento:</span>
                     <span className="text-2xl font-black text-luxem-primary">
-                      ${(quote.total / 100).toFixed(2)}
+                      {formatUSD((quote.total || quote.totalCents || 0) / 100)}
                     </span>
                   </div>
 
@@ -1019,7 +1085,7 @@ function BookingContent() {
                       Depósito en Garantía (Reembolsable):
                     </div>
                     <div className="text-sm font-extrabold text-amber-900">
-                      ${(quote.securityDeposit / 100).toFixed(2)} USD
+                      {formatUSD((quote.securityDeposit || quote.depositRequiredCents || 0) / 100)} USD
                     </div>
                     <p className="text-[11px] text-amber-800/80 mt-1">
                       Se retiene en tarjeta o transferencia al retirar y se libera al devolver el vehículo sin daños ni multas.

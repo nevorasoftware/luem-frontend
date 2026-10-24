@@ -59,12 +59,12 @@ export default function AdminVehiclesPage() {
   const [photoManagerVehicle, setPhotoManagerVehicle] = useState<VehicleAdmin | null>(null);
 
   // Form fields
-  const [formBrand, setFormBrand] = useState('Toyota');
+  const [formBrand, setFormBrand] = useState('');
   const [formModel, setFormModel] = useState('');
-  const [formYear, setFormYear] = useState('2024');
+  const [formYear, setFormYear] = useState(new Date().getFullYear().toString());
   const [formPlate, setFormPlate] = useState('');
-  const [formDailyPrice, setFormDailyPrice] = useState('45');
-  const [formSecurityDeposit, setFormSecurityDeposit] = useState('400');
+  const [formDailyPrice, setFormDailyPrice] = useState('');
+  const [formSecurityDeposit, setFormSecurityDeposit] = useState('');
   const [formTransmission, setFormTransmission] = useState('AUTOMATICA');
   const [formSeats, setFormSeats] = useState('5');
   const [formFuelType, setFormFuelType] = useState('GASOLINA');
@@ -107,12 +107,12 @@ export default function AdminVehiclesPage() {
   };
 
   const resetForm = () => {
-    setFormBrand('Toyota');
+    setFormBrand('');
     setFormModel('');
-    setFormYear('2024');
+    setFormYear(new Date().getFullYear().toString());
     setFormPlate('');
-    setFormDailyPrice('45');
-    setFormSecurityDeposit('400');
+    setFormDailyPrice('');
+    setFormSecurityDeposit('');
     setFormTransmission('AUTOMATICA');
     setFormSeats('5');
     setFormFuelType('GASOLINA');

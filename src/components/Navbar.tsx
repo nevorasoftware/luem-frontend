@@ -3,9 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Car, Menu, X, Phone, Search, ShieldCheck } from 'lucide-react';
+import { usePublicSettings } from '@/lib/settings';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { settings } = usePublicSettings();
+  const whatsappClean = settings.whatsapp ? settings.whatsapp.replace(/\D/g, '') : '';
 
   return (
     <header className="sticky top-0 z-50 bg-[#0B1220]/95 backdrop-blur-md border-b border-[#1769AA]/30 text-white">
@@ -18,7 +21,7 @@ export default function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-wider text-white">
-                LUEM
+                {settings.businessName || 'LUEM'}
               </span>
               <span className="text-[10px] uppercase tracking-[0.2em] text-[#299BEB] font-semibold -mt-1">
                 Rent a Car • El Salvador
@@ -63,15 +66,17 @@ export default function Navbar() {
 
           {/* Botones de acción */}
           <div className="hidden md:flex items-center gap-4">
-            <a
-              href="https://wa.me/50377778888?text=Hola,%20quisiera%20informaci%C3%B3n%20sobre%20el%20alquiler%20de%20un%20veh%C3%ADculo%20en%20LUEM"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs font-semibold text-[#C7D0DA] hover:text-white px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#299BEB]" />
-              <span>WhatsApp</span>
-            </a>
+            {whatsappClean && (
+              <a
+                href={`https://wa.me/${whatsappClean}?text=Hola,%20quisiera%20informaci%C3%B3n%20sobre%20el%20alquiler%20de%20un%20veh%C3%ADculo%20en%20LUEM`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs font-semibold text-[#C7D0DA] hover:text-white px-3 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#299BEB]" />
+                <span>WhatsApp</span>
+              </a>
+            )}
 
             <Link
               href="/vehiculos"
@@ -80,6 +85,7 @@ export default function Navbar() {
               Reservar Ahora
             </Link>
           </div>
+
 
           {/* Botón Móvil */}
           <div className="flex md:hidden items-center gap-2">

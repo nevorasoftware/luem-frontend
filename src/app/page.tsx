@@ -20,6 +20,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { formatUSD } from '../lib/utils';
+import { usePublicSettings } from '../lib/settings';
 
 interface VehicleSummary {
   id: string;
@@ -38,15 +39,18 @@ interface VehicleSummary {
 
 export default function HomePage() {
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
+  const [locations, setLocations] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const { settings } = usePublicSettings();
+  const whatsappClean = settings.whatsapp ? settings.whatsapp.replace(/\D/g, '') : '';
 
   // Estados del buscador
   const [pickupDate, setPickupDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
   const [pickupTime, setPickupTime] = useState('10:00');
   const [returnTime, setReturnTime] = useState('10:00');
-  const [location, setLocation] = useState('aeropuerto');
+  const [location, setLocation] = useState('');
 
   useEffect(() => {
     // Configurar fechas mínimas por defecto (hoy + 2 días)
@@ -59,11 +63,18 @@ export default function HomePage() {
     setPickupDate(d1.toISOString().split('T')[0]);
     setReturnDate(d2.toISOString().split('T')[0]);
 
-    // Cargar vehículos destacados desde el backend
-    fetch('/api/fleet/vehicles')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data) => {
-        setVehicles(Array.isArray(data) ? data.slice(0, 4) : []);
+    // Cargar vehículos destacados y ubicaciones desde el backend
+    Promise.all([
+      fetch('/api/fleet/vehicles').then((res) => (res.ok ? res.json() : [])),
+      fetch('/api/fleet/locations').then((res) => (res.ok ? res.json() : [])),
+    ])
+      .then(([vehData, locData]) => {
+        setVehicles(Array.isArray(vehData) ? vehData.slice(0, 4) : []);
+        const locList = Array.isArray(locData) ? locData : [];
+        setLocations(locList);
+        if (locList.length > 0) {
+          setLocation(locList[0].id);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -75,7 +86,12 @@ export default function HomePage() {
     e.preventDefault();
     const p = `${pickupDate}T${pickupTime}:00Z`;
     const r = `${returnDate}T${returnTime}:00Z`;
-    window.location.href = `/vehiculos?pickupAt=${encodeURIComponent(p)}&returnAt=${encodeURIComponent(r)}&loc=${location}`;
+    const params = new URLSearchParams({
+      pickupAt: p,
+      returnAt: r,
+    });
+    if (location) params.set('pickupLocationId', location);
+    window.location.href = `/vehiculos?${params.toString()}`;
   };
 
   const faqs = [
@@ -149,10 +165,15 @@ export default function HomePage() {
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full bg-[#F4F6F8] border border-slate-300 rounded-lg px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#1769AA]"
                 >
-                  <option value="aeropuerto">Aeropuerto Internacional (SAL)</option>
-                  <option value="sansalvador">Sucursal Central — San Salvador</option>
-                  <option value="santaana">Sucursal Santa Ana</option>
-                  <option value="sanmiguel">Sucursal San Miguel</option>
+                  {locations.length > 0 ? (
+                    locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">Oficina Principal / Según disponibilidad</option>
+                  )}
                 </select>
               </div>
 
@@ -478,15 +499,17 @@ export default function HomePage() {
             >
               Explorar Catálogo
             </Link>
-            <a
-              href="https://wa.me/50377778888?text=Hola,%20deseo%20asistencia%20para%20reservar%20un%20veh%C3%ADculo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-6 py-3.5 rounded-xl font-bold text-white bg-[#299BEB] hover:bg-[#2083cb] shadow-xl transition-all flex items-center gap-2"
-            >
-              <Phone className="w-4 h-4" />
-              <span>Chatear por WhatsApp</span>
-            </a>
+            {whatsappClean && (
+              <a
+                href={`https://wa.me/${whatsappClean}?text=Hola,%20deseo%20asistencia%20para%20reservar%20un%20veh%C3%ADculo`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-3.5 rounded-xl font-bold text-white bg-[#299BEB] hover:bg-[#2083cb] shadow-xl transition-all flex items-center gap-2"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Chatear por WhatsApp</span>
+              </a>
+            )}
           </div>
         </div>
       </section>
