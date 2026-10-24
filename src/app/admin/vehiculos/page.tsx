@@ -46,8 +46,16 @@ interface VehicleAdmin {
   photos?: VehiclePhotoItem[];
 }
 
+interface CategoryOption {
+  id: string;
+  name: string;
+  slug?: string;
+}
+
 export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<VehicleAdmin[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [filterCategory, setFilterCategory] = useState('');
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
@@ -59,6 +67,7 @@ export default function AdminVehiclesPage() {
   const [photoManagerVehicle, setPhotoManagerVehicle] = useState<VehicleAdmin | null>(null);
 
   // Form fields
+  const [formCategoryId, setFormCategoryId] = useState('');
   const [formBrand, setFormBrand] = useState('');
   const [formModel, setFormModel] = useState('');
   const [formYear, setFormYear] = useState(new Date().getFullYear().toString());
@@ -79,7 +88,23 @@ export default function AdminVehiclesPage() {
 
   useEffect(() => {
     loadVehicles();
+    loadCategories();
   }, []);
+
+  const loadCategories = async () => {
+    try {
+      const res = await fetch('/api/fleet/categories');
+      if (res.ok) {
+        const data = await res.json();
+        const cats: CategoryOption[] = Array.isArray(data) ? data : [];
+        setCategories(cats);
+        return cats;
+      }
+    } catch (e) {
+      console.error('Error al cargar categorías:', e);
+    }
+    return [];
+  };
 
   const showFeedbackMsg = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
@@ -107,6 +132,7 @@ export default function AdminVehiclesPage() {
   };
 
   const resetForm = () => {
+    setFormCategoryId(categories[0]?.id || '');
     setFormBrand('');
     setFormModel('');
     setFormYear(new Date().getFullYear().toString());
@@ -123,8 +149,15 @@ export default function AdminVehiclesPage() {
     setCreatePhotos([]);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
     resetForm();
+    let currentCats = categories;
+    if (currentCats.length === 0) {
+      currentCats = await loadCategories();
+    }
+    if (currentCats.length > 0) {
+      setFormCategoryId(currentCats[0].id);
+    }
     setShowCreateModal(true);
   };
 
@@ -135,6 +168,10 @@ export default function AdminVehiclesPage() {
   };
 
   const openEditModal = async (v: VehicleAdmin) => {
+    let currentCats = categories;
+    if (currentCats.length === 0) {
+      currentCats = await loadCategories();
+    }
     setEditingVehicle(v);
     setFormBrand(v.brand || '');
     setFormModel(v.model || v.name || '');
@@ -148,6 +185,7 @@ export default function AdminVehiclesPage() {
     setFormSeats(String(v.passengers || v.seats || 5));
     setFormFuelType(v.fuelType || 'GASOLINA');
     setFormStatus(v.operationalStatus || v.status || 'OPERATIVO');
+    setFormCategoryId(v.categoryId || v.category?.id || (currentCats[0]?.id ?? ''));
 
     // Cargar fotos iniciales
     setEditingPhotos(v.photos || []);
@@ -376,6 +414,7 @@ export default function AdminVehiclesPage() {
           brand: formBrand.trim(),
           model: formModel.trim(),
           name: formModel.trim(),
+          categoryId: formCategoryId || undefined,
           year: parseInt(formYear, 10),
           plate: formPlate.trim().toUpperCase(),
           licensePlate: formPlate.trim().toUpperCase(),
@@ -443,6 +482,7 @@ export default function AdminVehiclesPage() {
           brand: formBrand.trim(),
           model: formModel.trim(),
           name: formModel.trim(),
+          categoryId: formCategoryId || undefined,
           year: parseInt(formYear, 10),
           plate: formPlate.trim().toUpperCase(),
           licensePlate: formPlate.trim().toUpperCase(),
@@ -549,7 +589,9 @@ export default function AdminVehiclesPage() {
     const model = (v.model || v.name || '').toLowerCase();
     const plate = (v.plate || v.licensePlate || '').toLowerCase();
     const category = (v.category?.name || '').toLowerCase();
-    return brand.includes(q) || model.includes(q) || plate.includes(q) || category.includes(q);
+    const matchSearch = brand.includes(q) || model.includes(q) || plate.includes(q) || category.includes(q);
+    const matchCategory = !filterCategory || v.categoryId === filterCategory || v.category?.id === filterCategory;
+    return matchSearch && matchCategory;
   });
 
   return (
@@ -589,19 +631,33 @@ export default function AdminVehiclesPage() {
         </div>
       )}
 
-      {/* Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-        <div className="relative w-full sm:w-96">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
-          <input
-            type="text"
-            placeholder="Buscar por marca, modelo o placa..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-luxem-primary"
-          />
+      {/* Search and Filters Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              placeholder="Buscar por marca, modelo o placa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-luxem-primary"
+            />
+          </div>
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="px-3 py-2 text-xs rounded-xl border border-gray-200 bg-white font-medium text-gray-700 focus:outline-none focus:border-luxem-primary"
+          >
+            <option value="">Todas las categorías ({categories.length})</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="text-[11px] font-bold text-luxem-night/50 hidden sm:block">
+        <div className="text-[11px] font-bold text-luxem-night/50">
           Inventario: {filtered.length} {filtered.length === 1 ? 'unidad' : 'unidades'}
         </div>
       </div>
@@ -681,7 +737,11 @@ export default function AdminVehiclesPage() {
                       <td className="py-3.5 px-4 font-mono font-bold text-luxem-primary">
                         {v.plate || v.licensePlate || 'S/P'}
                       </td>
-                      <td className="py-3.5 px-4">{v.category?.name || 'SUV / Sedán'}</td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-800 border border-slate-200/80">
+                          {v.category?.name || 'Sin Categoría'}
+                        </span>
+                      </td>
                       <td className="py-3.5 px-4">{v.transmission || 'AUTOMATICA'}</td>
                       <td className="py-3.5 px-4 font-bold text-luxem-night">
                         ${rate.toFixed(2)}
@@ -832,7 +892,26 @@ export default function AdminVehiclesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Categoría *</label>
+                  <select
+                    value={formCategoryId}
+                    onChange={(e) => setFormCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-medium focus:ring-2 focus:ring-luxem-primary/20"
+                    required
+                  >
+                    {categories.length === 0 ? (
+                      <option value="">Cargando categorías...</option>
+                    ) : (
+                      categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Transmisión *</label>
                   <select
@@ -1079,7 +1158,26 @@ export default function AdminVehiclesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-bold text-gray-700 block mb-1">Categoría *</label>
+                  <select
+                    value={formCategoryId}
+                    onChange={(e) => setFormCategoryId(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-xl bg-white font-medium focus:ring-2 focus:ring-luxem-primary/20"
+                    required
+                  >
+                    {categories.length === 0 ? (
+                      <option value="">Cargando categorías...</option>
+                    ) : (
+                      categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Transmisión *</label>
                   <select
